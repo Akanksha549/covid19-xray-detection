@@ -37,16 +37,6 @@ train_datagen = ImageDataGenerator(
     validation_split=0.2
 )
 
-# -------------------------------------------------------
-# Compile
-# -------------------------------------------------------
-
-model.compile(
-    optimizer='adam',
-    loss='binary_crossentropy',
-    metrics=['accuracy']
-)
-
 
 # -------------------------------------------------------
 # Accuracy Plot
