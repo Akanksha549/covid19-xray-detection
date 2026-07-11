@@ -1,168 +1,217 @@
-# Detection of Covid-19 from Chest-X-ray
-""
-# Import the required modules
+# Detection of Covid-19 from Chest X-ray
+
+import os
 import numpy as np
-import pandas as pd
 import tensorflow as tf
-import keras_preprocessing
-from keras_preprocessing import image
-from keras_preprocessing.image import ImageDataGenerator
 import matplotlib.pyplot as plt
 
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.models import load_model
 
+# -------------------------------------------------------
+# Dataset Path
+# -------------------------------------------------------
 
-"""# Data ingesting of Covid 19 images
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATASET_DIR = os.path.join(BASE_DIR, "dataset")
 
+CLASSES = ["covid", "normal"]
 
+print("Dataset Path:", DATASET_DIR)
+print("Dataset Exists:", os.path.exists(DATASET_DIR))
 
-"""# Image augmentation process:"""
+# -------------------------------------------------------
+# Image Augmentation
+# -------------------------------------------------------
 
 train_datagen = ImageDataGenerator(
     rescale=1./255,
     rotation_range=20,
     horizontal_flip=True,
-    shear_range = 0.2,
-    zoom_range = 0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
     width_shift_range=0.2,
     height_shift_range=0.2,
-    fill_mode = 'nearest',
-
-    #split dataset to training(80%) and validation(20%):
+    fill_mode='nearest',
     validation_split=0.2
 )
 
-"""# Training dataset and Validation dataset:"""
+# -------------------------------------------------------
+# Training Data
+# -------------------------------------------------------
 
 train_data = train_datagen.flow_from_directory(
-    directory=BASIS_DIR,
+    directory=DATASET_DIR,
     target_size=(299, 299),
     batch_size=32,
     shuffle=True,
     class_mode='binary',
     subset='training',
     classes=CLASSES
-    )
+)
 
 val_data = train_datagen.flow_from_directory(
-    directory=BASIS_DIR,
+    directory=DATASET_DIR,
     target_size=(299, 299),
     batch_size=32,
     shuffle=True,
     class_mode='binary',
     subset='validation',
     classes=CLASSES
-    )
+)
 
-"""# Using sequential model:"""
+# -------------------------------------------------------
+# CNN Model
+# -------------------------------------------------------
 
-model = tf.keras.models.Sequential([
-    tf.keras.layers.Conv2D(32, (3,3), activation='relu', input_shape=(299, 299, 3)),
-    tf.keras.layers.MaxPooling2D(2, 2),
+model = tf.keras.Sequential([
 
-    tf.keras.layers.Conv2D(32, (3,3), activation='relu'),
+    tf.keras.layers.Input(shape=(299,299,3)),
+
+    tf.keras.layers.Conv2D(32,(3,3),activation='relu'),
     tf.keras.layers.MaxPooling2D(2,2),
 
-    tf.keras.layers.Conv2D(64, (3,3), activation='relu'),
+    tf.keras.layers.Conv2D(32,(3,3),activation='relu'),
     tf.keras.layers.MaxPooling2D(2,2),
 
-    tf.keras.layers.Conv2D(128, (3,3), activation='relu'),
+    tf.keras.layers.Conv2D(64,(3,3),activation='relu'),
+    tf.keras.layers.MaxPooling2D(2,2),
+
+    tf.keras.layers.Conv2D(128,(3,3),activation='relu'),
     tf.keras.layers.MaxPooling2D(2,2),
 
     tf.keras.layers.Flatten(),
-    tf.keras.layers.Dense(128, activation='relu'),
-    tf.keras.layers.Dense(1, activation='sigmoid')
+
+    tf.keras.layers.Dense(128,activation='relu'),
+
+    tf.keras.layers.Dense(1,activation='sigmoid')
+
 ])
 
 model.summary()
 
-# (filter_height*filter_width*number_of_channels+1)*number_of_filters
-(3*3*32+1)*32
+# -------------------------------------------------------
+# Compile
+# -------------------------------------------------------
 
-# Compiling model with 'adam' optimizer loss function 'binary_crossentropy'
-model.compile(loss='binary_crossentropy',
-              optimizer=tf.optimizers.Adam(),
-              metrics=['accuracy']
-             )
+model.compile(
+    optimizer='adam',
+    loss='binary_crossentropy',
+    metrics=['accuracy']
+)
 
-# Training process:
-number_epochs = 10
-# You can change number_epochs above. But the bigger the value, the more time it takes for training
-history = model.fit(train_data, epochs=number_epochs,
-                    validation_data=val_data, verbose=2)
+# -------------------------------------------------------
+# Train
+# -------------------------------------------------------
 
-# Plotting training accuracy and validation accuracy
-plt.plot(history.history['accuracy'], 'r', label='Accuracy Training')
-plt.plot(history.history['val_accuracy'], 'b', label='Accuracy Validation')
-plt.title('Accuracy Training and Validation')
-plt.ylabel('Accuracy')
-plt.xlabel('Epoch')
-plt.legend(loc=0)
+history = model.fit(
+    train_data,
+    validation_data=val_data,
+    epochs=10,
+    verbose=2
+)
+
+# -------------------------------------------------------
+# Save Model
+# -------------------------------------------------------
+
+MODEL_PATH = os.path.join(BASE_DIR, "my_modell.keras")
+
+model.save(MODEL_PATH)
+
+print("Model Saved:", MODEL_PATH)
+
+# -------------------------------------------------------
+# Accuracy Plot
+# -------------------------------------------------------
+
+plt.figure(figsize=(8,5))
+
+plt.plot(history.history['accuracy'],label='Train Accuracy')
+plt.plot(history.history['val_accuracy'],label='Validation Accuracy')
+
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.title("Training Accuracy")
+
+plt.legend()
+
 plt.show()
 
-# Plotting training loss and validation loss
-plt.plot(history.history['loss'], 'r', label='Loss Training')
-plt.plot(history.history['val_loss'], 'b', label='Loss Validation')
-plt.title('Loss Training and Validation')
-plt.ylabel('Loss')
-plt.xlabel('Epoch')
-plt.legend(loc=0)
+# -------------------------------------------------------
+# Loss Plot
+# -------------------------------------------------------
+
+plt.figure(figsize=(8,5))
+
+plt.plot(history.history['loss'],label='Train Loss')
+plt.plot(history.history['val_loss'],label='Validation Loss')
+
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.title("Training Loss")
+
+plt.legend()
+
 plt.show()
 
-import tensorflow as tf
-from tensorflow.keras.models import save_model
-# Save the compiled model to an keras file
-model.save('my_modell.keras')
+# -------------------------------------------------------
+# Load Saved Model
+# -------------------------------------------------------
 
-"""# Test random image"""
+model = load_model(MODEL_PATH)
 
-import numpy as np
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.models import load_model
-import matplotlib.pyplot as plt
+# -------------------------------------------------------
+# Test Normal Image
+# -------------------------------------------------------
 
-# Assuming you have a pre-trained model saved as 'your_model.h5'
-model = load_model('my_modell.keras')
+normal_image = os.path.join(
+    DATASET_DIR,
+    "normal",
+    "IM-0131-0001.jpeg"
+)
 
-path = "/content/dataset/normal/IM-0131-0001.jpeg"
-img = image.load_img(path, target_size=(299, 299))
-img_array = image.img_to_array(img) / 255.0
-img_array = np.expand_dims(img_array, axis=0)
+if os.path.exists(normal_image):
 
-result = model.predict(img_array)
+    img = image.load_img(normal_image,target_size=(299,299))
+    img_array = image.img_to_array(img)/255.0
+    img_array = np.expand_dims(img_array,axis=0)
 
-# Assuming your model output has two classes (COVID and Normal)
-threshold = 0.5
-prediction = "COVID" if result[0][0] > threshold else "NORMAL"
-print(prediction)
+    result = model.predict(img_array)
 
-# Display the image
-plt.imshow(img)
-plt.title(f"Prediction: {prediction}")
-plt.axis('off')  # Hide the axes
-plt.show()
+    prediction = "COVID" if result[0][0] > 0.5 else "NORMAL"
 
-import numpy as np
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.models import load_model
-import matplotlib.pyplot as plt
+    print("Prediction:",prediction)
 
-# Assuming you have a pre-trained model saved as 'your_model.h5'
-model = load_model('my_modell.keras')
+    plt.imshow(img)
+    plt.title(prediction)
+    plt.axis("off")
+    plt.show()
 
-path = "/content/dataset/covid/1-s2.0-S0929664620300449-gr2_lrg-a.jpg"
-img = image.load_img(path, target_size=(299, 299))
-img_array = image.img_to_array(img) / 255.0
-img_array = np.expand_dims(img_array, axis=0)
+# -------------------------------------------------------
+# Test Covid Image
+# -------------------------------------------------------
 
-result = model.predict(img_array)
+covid_image = os.path.join(
+    DATASET_DIR,
+    "covid",
+    "1-s2.0-S0929664620300449-gr2_lrg-a.jpg"
+)
 
-# Assuming your model output has two classes (COVID and Normal)
-threshold = 0.5
-prediction = "COVID" if result[0][0] > threshold else "NORMAL"
-print(prediction)
+if os.path.exists(covid_image):
 
-# Display the image
-plt.imshow(img)
-plt.title(f"Prediction: {prediction}")
-plt.axis('off')  # Hide the axes
-plt.show()
+    img = image.load_img(covid_image,target_size=(299,299))
+    img_array = image.img_to_array(img)/255.0
+    img_array = np.expand_dims(img_array,axis=0)
+
+    result = model.predict(img_array)
+
+    prediction = "COVID" if result[0][0] > 0.5 else "NORMAL"
+
+    print("Prediction:",prediction)
+
+    plt.imshow(img)
+    plt.title(prediction)
+    plt.axis("off")
+    plt.show()
