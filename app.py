@@ -34,7 +34,7 @@ st.markdown("""
 # MODEL PATH
 # -------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "modell.keras")
+MODEL_PATH = os.path.join(BASE_DIR, "my_modell.keras")
 
 # -------------------------------------------------
 # LOAD MODEL
