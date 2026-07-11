@@ -38,60 +38,6 @@ train_datagen = ImageDataGenerator(
 )
 
 # -------------------------------------------------------
-# Training Data
-# -------------------------------------------------------
-
-train_data = train_datagen.flow_from_directory(
-    directory=DATASET_DIR,
-    target_size=(299, 299),
-    batch_size=32,
-    shuffle=True,
-    class_mode='binary',
-    subset='training',
-    classes=CLASSES
-)
-
-val_data = train_datagen.flow_from_directory(
-    directory=DATASET_DIR,
-    target_size=(299, 299),
-    batch_size=32,
-    shuffle=True,
-    class_mode='binary',
-    subset='validation',
-    classes=CLASSES
-)
-
-# -------------------------------------------------------
-# CNN Model
-# -------------------------------------------------------
-
-model = tf.keras.Sequential([
-
-    tf.keras.layers.Input(shape=(299,299,3)),
-
-    tf.keras.layers.Conv2D(32,(3,3),activation='relu'),
-    tf.keras.layers.MaxPooling2D(2,2),
-
-    tf.keras.layers.Conv2D(32,(3,3),activation='relu'),
-    tf.keras.layers.MaxPooling2D(2,2),
-
-    tf.keras.layers.Conv2D(64,(3,3),activation='relu'),
-    tf.keras.layers.MaxPooling2D(2,2),
-
-    tf.keras.layers.Conv2D(128,(3,3),activation='relu'),
-    tf.keras.layers.MaxPooling2D(2,2),
-
-    tf.keras.layers.Flatten(),
-
-    tf.keras.layers.Dense(128,activation='relu'),
-
-    tf.keras.layers.Dense(1,activation='sigmoid')
-
-])
-
-model.summary()
-
-# -------------------------------------------------------
 # Compile
 # -------------------------------------------------------
 
@@ -101,26 +47,6 @@ model.compile(
     metrics=['accuracy']
 )
 
-# -------------------------------------------------------
-# Train
-# -------------------------------------------------------
-
-history = model.fit(
-    train_data,
-    validation_data=val_data,
-    epochs=10,
-    verbose=2
-)
-
-# -------------------------------------------------------
-# Save Model
-# -------------------------------------------------------
-
-MODEL_PATH = os.path.join(BASE_DIR, "my_modell.keras")
-
-model.save(MODEL_PATH)
-
-print("Model Saved:", MODEL_PATH)
 
 # -------------------------------------------------------
 # Accuracy Plot
