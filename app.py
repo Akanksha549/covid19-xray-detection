@@ -96,18 +96,14 @@ if uploaded_file is not None:
     # PREDICTION
     # -------------------------------------------------
     with st.spinner("Analyzing X-ray..."):
-
         prediction = model.predict(img)
-
         probability = float(prediction[0][0])
-
         if probability >= 0.5:
-            label = "COVID-19"
+            label = "Normal"
             confidence = probability
         else:
-            label = "Normal"
+            label = "COVID-19"
             confidence = 1 - probability
-
     # -------------------------------------------------
     # RESULTS
     # -------------------------------------------------
