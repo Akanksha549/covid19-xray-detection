@@ -1,133 +1,143 @@
 # Detection of Covid-19 from Chest X-ray
 
-import os
-import numpy as np
+import streamlit as st
 import tensorflow as tf
-import matplotlib.pyplot as plt
+import numpy as np
+from PIL import Image
+import os
 
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.models import load_model
+# -------------------------------------------------
+# PAGE CONFIGURATION
+# -------------------------------------------------
+st.set_page_config(
+    page_title="COVID-19 Chest X-ray Detection",
+    page_icon="🩺",
+    layout="wide"
+)
 
-# -------------------------------------------------------
-# Dataset Path
-# -------------------------------------------------------
+# -------------------------------------------------
+# CUSTOM CSS
+# -------------------------------------------------
+st.markdown("""
+<style>
+.main{
+    padding-top:2rem;
+}
+.stButton>button{
+    width:100%;
+    border-radius:10px;
+}
+</style>
+""", unsafe_allow_html=True)
 
+# -------------------------------------------------
+# MODEL PATH
+# -------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATASET_DIR = os.path.join(BASE_DIR, "dataset")
+MODEL_PATH = os.path.join(BASE_DIR, "modell.keras")
 
-CLASSES = ["covid", "normal"]
+# -------------------------------------------------
+# LOAD MODEL
+# -------------------------------------------------
+@st.cache_resource
+def load_covid_model():
+    return tf.keras.models.load_model(MODEL_PATH)
 
-print("Dataset Path:", DATASET_DIR)
-print("Dataset Exists:", os.path.exists(DATASET_DIR))
+model = load_covid_model()
 
-# -------------------------------------------------------
-# Image Augmentation
-# -------------------------------------------------------
+# -------------------------------------------------
+# TITLE
+# -------------------------------------------------
+st.title("🩺 COVID-19 Chest X-ray Detection")
+st.write(
+    "Upload a chest X-ray image to predict whether it indicates **COVID-19** or **Normal**."
+)
 
-train_datagen = ImageDataGenerator(
-    rescale=1./255,
-    rotation_range=20,
-    horizontal_flip=True,
-    shear_range=0.2,
-    zoom_range=0.2,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    fill_mode='nearest',
-    validation_split=0.2
+# -------------------------------------------------
+# SIDEBAR
+# -------------------------------------------------
+st.sidebar.title("About")
+st.sidebar.info(
+    """
+This application uses a trained Convolutional Neural Network (CNN)
+to classify chest X-ray images as:
+
+- COVID-19
+- Normal
+"""
+)
+
+# -------------------------------------------------
+# FILE UPLOADER
+# -------------------------------------------------
+uploaded_file = st.file_uploader(
+    "Upload Chest X-ray Image",
+    type=["jpg", "jpeg", "png"]
+)
+
+if uploaded_file is not None:
+
+    image = Image.open(uploaded_file).convert("RGB")
+
+    st.image(image, caption="Uploaded X-ray", use_container_width=True)
+
+    # -------------------------------------------------
+    # PREPROCESS
+    # -------------------------------------------------
+    img = image.resize((299, 299))
+
+    img = np.array(img)
+
+    img = img / 255.0
+
+    img = np.expand_dims(img, axis=0)
+
+    # -------------------------------------------------
+    # PREDICTION
+    # -------------------------------------------------
+    with st.spinner("Analyzing X-ray..."):
+
+        prediction = model.predict(img)
+
+        probability = float(prediction[0][0])
+
+        if probability >= 0.5:
+            label = "COVID-19"
+            confidence = probability
+        else:
+            label = "Normal"
+            confidence = 1 - probability
+
+    # -------------------------------------------------
+    # RESULTS
+    # -------------------------------------------------
+    st.success("Prediction Completed")
+
+    if label == "COVID-19":
+        st.error(f"### Prediction: {label}")
+    else:
+        st.success(f"### Prediction: {label}")
+
+    st.metric(
+        label="Confidence",
+        value=f"{confidence*100:.2f}%"
+    )
+
+    st.progress(int(confidence * 100))
+
+# -------------------------------------------------
+# FOOTER
+# -------------------------------------------------
+st.markdown("---")
+st.markdown(
+    "<center>Developed using TensorFlow, Keras & Streamlit</center>",
+    unsafe_allow_html=True
 )
 
 
-# -------------------------------------------------------
-# Accuracy Plot
-# -------------------------------------------------------
 
-plt.figure(figsize=(8,5))
 
-plt.plot(history.history['accuracy'],label='Train Accuracy')
-plt.plot(history.history['val_accuracy'],label='Validation Accuracy')
 
-plt.xlabel("Epoch")
-plt.ylabel("Accuracy")
-plt.title("Training Accuracy")
 
-plt.legend()
 
-plt.show()
 
-# -------------------------------------------------------
-# Loss Plot
-# -------------------------------------------------------
-
-plt.figure(figsize=(8,5))
-
-plt.plot(history.history['loss'],label='Train Loss')
-plt.plot(history.history['val_loss'],label='Validation Loss')
-
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.title("Training Loss")
-
-plt.legend()
-
-plt.show()
-
-# -------------------------------------------------------
-# Load Saved Model
-# -------------------------------------------------------
-
-model = load_model(MODEL_PATH)
-
-# -------------------------------------------------------
-# Test Normal Image
-# -------------------------------------------------------
-
-normal_image = os.path.join(
-    DATASET_DIR,
-    "normal",
-    "IM-0131-0001.jpeg"
-)
-
-if os.path.exists(normal_image):
-
-    img = image.load_img(normal_image,target_size=(299,299))
-    img_array = image.img_to_array(img)/255.0
-    img_array = np.expand_dims(img_array,axis=0)
-
-    result = model.predict(img_array)
-
-    prediction = "COVID" if result[0][0] > 0.5 else "NORMAL"
-
-    print("Prediction:",prediction)
-
-    plt.imshow(img)
-    plt.title(prediction)
-    plt.axis("off")
-    plt.show()
-
-# -------------------------------------------------------
-# Test Covid Image
-# -------------------------------------------------------
-
-covid_image = os.path.join(
-    DATASET_DIR,
-    "covid",
-    "1-s2.0-S0929664620300449-gr2_lrg-a.jpg"
-)
-
-if os.path.exists(covid_image):
-
-    img = image.load_img(covid_image,target_size=(299,299))
-    img_array = image.img_to_array(img)/255.0
-    img_array = np.expand_dims(img_array,axis=0)
-
-    result = model.predict(img_array)
-
-    prediction = "COVID" if result[0][0] > 0.5 else "NORMAL"
-
-    print("Prediction:",prediction)
-
-    plt.imshow(img)
-    plt.title(prediction)
-    plt.axis("off")
-    plt.show()
